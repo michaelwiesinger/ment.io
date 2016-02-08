@@ -1,13 +1,13 @@
 {
-  "name": "ment.io",
+  "name": "ment.io.varias",
   "main": "dist/mentio.js",
-  "version": "0.9.24",
+  "version": "0.0.1",
   "homepage": "https://github.com/jeff-collins/ment.io",
   "authors": [
     "jeff-collins <i.am.jeff.collins@gmail.com>",
     "adamayres <magicaj@gmail.com>"
   ],
-  "description": "Mentions for Angular",
+  "description": "Mentions for Angular, changed behaviour",
   "keywords": [
     "angular",
     "mentions",
