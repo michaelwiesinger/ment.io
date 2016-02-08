@@ -1,8 +1,7 @@
 'use strict';
 
 angular.module('mentio', [])
-    .directive('mentio', ['mentioUtil', '$document', '$compile', '$log', '$timeout',
-        function (mentioUtil, $document, $compile, $log, $timeout) {
+    .directive('mentio', ["mentioUtil", "$compile", "$log", "$document", "$timeout", function (mentioUtil, $compile, $log, $document, $timeout) {
         return {
             restrict: 'A',
             scope: {
@@ -12,27 +11,22 @@ angular.module('mentio', [])
                 items: '=mentioItems',
                 typedTerm: '=mentioTypedTerm',
                 altId: '=mentioId',
-                iframeElement: '=mentioIframeElement',
                 requireLeadingSpace: '=mentioRequireLeadingSpace',
-                selectNotFound: '=mentioSelectNotFound',
-                trimTerm: '=mentioTrimTerm',
                 ngModel: '='
             },
             controller: ["$scope", "$timeout", "$attrs", function($scope, $timeout, $attrs) {
 
                 $scope.query = function (triggerChar, triggerText) {
+                    console.log("query");
                     var remoteScope = $scope.triggerCharMap[triggerChar];
-
-                    if ($scope.trimTerm === undefined || $scope.trimTerm) {
-                        triggerText = triggerText.trim();
-                    }
-
                     remoteScope.showMenu();
 
                     remoteScope.search({
+                        //term: triggerText.trim()
                         term: triggerText
                     });
-
+                    console.log("triggerTExt: " + triggerText.trim());
+                    //remoteScope.typedTerm = triggerText.trim();
                     remoteScope.typedTerm = triggerText;
                 };
 
@@ -66,36 +60,26 @@ angular.module('mentio', [])
 
                 $scope.setTriggerText = function(text) {
                     if ($scope.syncTriggerText) {
-                        $scope.typedTerm = ($scope.trimTerm === undefined || $scope.trimTerm) ? text.trim() : text;
+                        $scope.typedTerm = text.trim();
                     }
                 };
 
-                $scope.context = function() {
-                    if ($scope.iframeElement) {
-                        return {iframe: $scope.iframeElement};
-                    }
-                };
-
-                $scope.replaceText = function (text, hasTrailingSpace) {
+                $scope.replaceText = function (text) {
                     $scope.hideAll();
-
-                    mentioUtil.replaceTriggerText($scope.context(), $scope.targetElement, $scope.targetElementPath,
-                        $scope.targetElementSelectedOffset, $scope.triggerCharSet, text, $scope.requireLeadingSpace,
-                        hasTrailingSpace);
-
-                    if (!hasTrailingSpace) {
-                        $scope.setTriggerText('');
-                        angular.element($scope.targetElement).triggerHandler('change');
-                        if ($scope.isContentEditable()) {
-                            $scope.contentEditableMenuPasted = true;
-                            var timer = $timeout(function() {
-                                $scope.contentEditableMenuPasted = false;
-                            }, 200);
-                            $scope.$on('$destroy', function() {
-                                $timeout.cancel(timer);
-                            });
-                        }
-                    }
+                    //debugger;
+                    mentioUtil.replaceTriggerText($scope.targetElement, $scope.targetElementPath,
+                        $scope.targetElementSelectedOffset, $scope.triggerCharSet, text, $scope.requireLeadingSpace);
+                    //$scope.setTriggerText('');
+                    //angular.element($scope.targetElement).triggerHandler('change');
+                    /*if ($scope.isContentEditable()) {
+                        $scope.contentEditableMenuPasted = true;
+                        var timer = $timeout(function() {
+                            $scope.contentEditableMenuPasted = false;
+                        }, 100);
+                        $scope.$on('$destroy', function() {
+                            $timeout.cancel(timer);
+                        });
+                    }*/
                 };
 
                 $scope.hideAll = function () {
@@ -146,17 +130,16 @@ angular.module('mentio', [])
                     if (!hasTrailingSpace) {
                         $scope.replacingMacro = true;
                         $scope.timer = $timeout(function() {
-                            mentioUtil.replaceMacroText($scope.context(), $scope.targetElement,
-                                $scope.targetElementPath, $scope.targetElementSelectedOffset,
-                                $scope.macros, $scope.macros[macro]);
+                            mentioUtil.replaceMacroText($scope.targetElement, $scope.targetElementPath,
+                                $scope.targetElementSelectedOffset, $scope.macros, $scope.macros[macro]);
                             angular.element($scope.targetElement).triggerHandler('change');
                             $scope.replacingMacro = false;
-                        }, 300);
+                        }, 1000);
                         $scope.$on('$destroy', function() {
                             $timeout.cancel($scope.timer);
                         });
                     } else {
-                        mentioUtil.replaceMacroText($scope.context(), $scope.targetElement, $scope.targetElementPath,
+                        mentioUtil.replaceMacroText($scope.targetElement, $scope.targetElementPath,
                             $scope.targetElementSelectedOffset, $scope.macros, $scope.macros[macro]);
                     }
                 };
@@ -178,10 +161,10 @@ angular.module('mentio', [])
                         if (
                             $attrs.id !== undefined ||
                             $attrs.mentioId !== undefined
-                        )
+                        ) 
                         {
                             if (
-                                $attrs.id === data.targetElement ||
+                                $attrs.id === data.targetElement || 
                                 (
                                     $attrs.mentioId !== undefined &&
                                     $scope.altId === data.targetElement
@@ -209,6 +192,7 @@ angular.module('mentio', [])
                         var activeMenuScope = $scope.getActiveMenuScope();
                         if (activeMenuScope) {
                             if (event.which === 9 || event.which === 13) {
+                                console.log(193);
                                 event.preventDefault();
                                 activeMenuScope.selectActive();
                             }
@@ -225,7 +209,6 @@ angular.module('mentio', [])
                                 activeMenuScope.$apply(function () {
                                     activeMenuScope.activateNextItem();
                                 });
-                                activeMenuScope.adjustScroll(1);
                             }
 
                             if (event.which === 38) {
@@ -233,7 +216,6 @@ angular.module('mentio', [])
                                 activeMenuScope.$apply(function () {
                                     activeMenuScope.activatePreviousItem();
                                 });
-                                activeMenuScope.adjustScroll(-1);
                             }
 
                             if (event.which === 37 || event.which === 39) {
@@ -245,7 +227,6 @@ angular.module('mentio', [])
             }],
             link: function (scope, element, attrs) {
                 scope.triggerCharMap = {};
-
                 scope.targetElement = element;
                 attrs.$set('autocomplete','off');
 
@@ -271,97 +252,15 @@ angular.module('mentio', [])
                     var el = linkFn(scope);
 
                     element.parent().append(el);
-
-                    scope.$on('$destroy', function() {
-                      el.remove();
-                    });
                 }
 
                 if (attrs.mentioTypedTerm) {
                     scope.syncTriggerText = true;
                 }
 
-                function keyHandler(event) {
-                    function stopEvent(event) {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        event.stopImmediatePropagation();
-                    }
-                    var activeMenuScope = scope.getActiveMenuScope();
-                    if (activeMenuScope) {
-                        if (event.which === 9 || event.which === 13) {
-                            stopEvent(event);
-                            activeMenuScope.selectActive();
-                            return false;
-                        }
-
-                        if (event.which === 27) {
-                            stopEvent(event);
-                            activeMenuScope.$apply(function () {
-                                activeMenuScope.hideMenu();
-                            });
-                            return false;
-                        }
-
-                        if (event.which === 40) {
-                            stopEvent(event);
-                            activeMenuScope.$apply(function () {
-                                activeMenuScope.activateNextItem();
-                            });
-                            activeMenuScope.adjustScroll(1);
-                            return false;
-                        }
-
-                        if (event.which === 38) {
-                            stopEvent(event);
-                            activeMenuScope.$apply(function () {
-                                activeMenuScope.activatePreviousItem();
-                            });
-                            activeMenuScope.adjustScroll(-1);
-                            return false;
-                        }
-
-                        if (event.which === 37 || event.which === 39) {
-                            stopEvent(event);
-                            return false;
-                        }
-                    }
-                }
-
-                scope.$watch(
-                    'iframeElement', function(newValue) {
-                        if (newValue) {
-                            var iframeDocument = newValue.contentWindow.document;
-                            iframeDocument.addEventListener('click',
-                                function () {
-                                    if (scope.isActive()) {
-                                        scope.$apply(function () {
-                                            scope.hideAll();
-                                        });
-                                    }
-                                }
-                            );
-
-
-                            iframeDocument.addEventListener('keydown', keyHandler, true /*capture*/);
-
-                            scope.$on ( '$destroy', function() {
-                                iframeDocument.removeEventListener ( 'keydown', keyHandler );
-                            });
-                        }
-                    }
-                );
-
                 scope.$watch(
                     'ngModel',
-                    function (newValue) {
-                        /*jshint maxcomplexity:14 */
-                        /*jshint maxstatements:39 */
-                        // yes this function needs refactoring
-                        if ((!newValue || newValue === '') && !scope.isActive()) {
-                            // ignore while setting up
-                            return;
-                        }
+                    function () {
                         if (scope.triggerCharSet === undefined) {
                             $log.error('Error, no mentio-items attribute was provided, ' +
                                 'and no separate mentio-menus were specified.  Nothing to do.');
@@ -382,70 +281,54 @@ angular.module('mentio', [])
                         var isActive = scope.isActive();
                         var isContentEditable = scope.isContentEditable();
 
-                        var mentionInfo = mentioUtil.getTriggerInfo(scope.context(), scope.triggerCharSet,
+                        var mentionInfo = mentioUtil.getTriggerInfo(scope.triggerCharSet, 
                             scope.requireLeadingSpace, isActive);
 
-                        if (mentionInfo !== undefined &&
+                        if (mentionInfo !== undefined && 
                                 (
-                                    !isActive ||
-                                    (isActive &&
+                                    !isActive || 
+                                    (isActive && 
                                         (
-                                            /* content editable selection changes to local nodes which
-                                            modifies the start position of the selection over time,
+                                            /* content editable selection changes to local nodes which 
+                                            modifies the start position of the selection over time, 
                                             just consider triggerchar changes which
-                                            will have the odd effect that deleting a trigger char pops
+                                            will have the odd effect that deleting a trigger char pops 
                                             the menu for a previous
                                             trigger char sequence if one exists in a content editable */
-                                            (isContentEditable && mentionInfo.mentionTriggerChar ===
+                                            (isContentEditable && mentionInfo.mentionTriggerChar === 
                                                 scope.currentMentionTriggerChar) ||
-                                            (!isContentEditable && mentionInfo.mentionPosition ===
+                                            (!isContentEditable && mentionInfo.mentionPosition === 
                                                 scope.currentMentionPosition)
                                         )
                                     )
                                 )
-                            )
+                            ) 
                         {
                             /** save selection info about the target control for later re-selection */
-                            if (mentionInfo.mentionSelectedElement) {
-                                scope.targetElement = mentionInfo.mentionSelectedElement;
-                                scope.targetElementPath = mentionInfo.mentionSelectedPath;
-                                scope.targetElementSelectedOffset = mentionInfo.mentionSelectedOffset;
-                            }
+                            scope.targetElement = mentionInfo.mentionSelectedElement;
+                            scope.targetElementPath = mentionInfo.mentionSelectedPath;
+                            scope.targetElementSelectedOffset = mentionInfo.mentionSelectedOffset;
 
                             /* publish to external ngModel */
-                            scope.setTriggerText(mentionInfo.mentionText);
+                            //scope.setTriggerText(mentionInfo.mentionText);
                             /* remember current position */
                             scope.currentMentionPosition = mentionInfo.mentionPosition;
                             scope.currentMentionTriggerChar = mentionInfo.mentionTriggerChar;
                             /* perform query */
                             scope.query(mentionInfo.mentionTriggerChar, mentionInfo.mentionText);
                         } else {
-                            var currentTypedTerm = scope.typedTerm;
+                            console.log(318);
                             scope.setTriggerText('');
                             scope.hideAll();
 
-                            var macroMatchInfo = mentioUtil.getMacroMatch(scope.context(), scope.macros);
+                            /*var macroMatchInfo = mentioUtil.getMacroMatch(scope.macros);
 
                             if (macroMatchInfo !== undefined) {
                                 scope.targetElement = macroMatchInfo.macroSelectedElement;
                                 scope.targetElementPath = macroMatchInfo.macroSelectedPath;
                                 scope.targetElementSelectedOffset = macroMatchInfo.macroSelectedOffset;
                                 scope.replaceMacro(macroMatchInfo.macroText, macroMatchInfo.macroHasTrailingSpace);
-                            } else if (scope.selectNotFound && currentTypedTerm && currentTypedTerm !== '') {
-                                var lastScope = scope.triggerCharMap[scope.currentMentionTriggerChar];
-                                if (lastScope) {
-                                    // just came out of typeahead state
-                                    var text = lastScope.select({
-                                        item: {label: currentTypedTerm}
-                                    });
-                                    if (typeof text.then === 'function') {
-                                        /* text is a promise, at least our best guess */
-                                        text.then(scope.replaceText);
-                                    } else {
-                                        scope.replaceText(text, true);
-                                    }
-                                }
-                            }
+                            }*/
                         }
                     }
                 );
@@ -453,8 +336,7 @@ angular.module('mentio', [])
         };
     }])
 
-    .directive('mentioMenu', ['mentioUtil', '$rootScope', '$log', '$window', '$document',
-        function (mentioUtil, $rootScope, $log, $window, $document) {
+    .directive('mentioMenu', ["mentioUtil", "$rootScope", "$log", "$window", "$document", function (mentioUtil, $rootScope, $log, $window, $document) {
         return {
             restrict: 'E',
             scope: {
@@ -481,17 +363,23 @@ angular.module('mentio', [])
                     return $scope.activeItem === item;
                 };
 
+                $scope.defaultSelect = function(locals) {
+                    return $scope.triggerChar + locals.item.name;
+                };
+
                 // callable both with controller (menuItem) and without controller (local)
                 this.selectItem = $scope.selectItem = function (item) {
-                    var text = $scope.select({
+                    var text = $scope.defaultSelect({
                         item: item
                     });
-                    if (typeof text.then === 'function') {
-                        /* text is a promise, at least our best guess */
-                        text.then($scope.parentMentio.replaceText);
-                    } else {
-                        $scope.parentMentio.replaceText(text);
-                    }
+                        if (typeof text.then === 'function') {
+                            /* text is a promise, at least our best guess */
+                            text.then($scope.parentMentio.replaceText);
+                        } else {
+                            $scope.parentMentio.replaceText(text);
+                        }
+                    
+                    
                 };
 
                 $scope.activateNextItem = function () {
@@ -502,18 +390,6 @@ angular.module('mentio', [])
                 $scope.activatePreviousItem = function () {
                     var index = $scope.items.indexOf($scope.activeItem);
                     this.activate($scope.items[index === 0 ? $scope.items.length - 1 : index - 1]);
-                };
-
-                $scope.isFirstItemActive = function () {
-                    var index = $scope.items.indexOf($scope.activeItem);
-
-                    return index === 0;
-                };
-
-                $scope.isLastItemActive = function () {
-                    var index = $scope.items.indexOf($scope.activeItem);
-
-                    return index === ($scope.items.length - 1);
                 };
 
                 $scope.selectActive = function () {
@@ -566,8 +442,7 @@ angular.module('mentio', [])
                         if (scope.isVisible()) {
                             var triggerCharSet = [];
                             triggerCharSet.push(scope.triggerChar);
-                            mentioUtil.popUnderMention(scope.parentMentio.context(),
-                                triggerCharSet, element, scope.requireLeadingSpace);
+                            mentioUtil.popUnderMention(triggerCharSet, element, scope.requireLeadingSpace);
                         }
                     }
                 );
@@ -580,6 +455,7 @@ angular.module('mentio', [])
                             scope.requestVisiblePendingSearch = false;
                         }
                     } else {
+                        console.log("hidemenu");
                         scope.hideMenu();
                     }
                 });
@@ -589,37 +465,13 @@ angular.module('mentio', [])
                     if (visible) {
                         var triggerCharSet = [];
                         triggerCharSet.push(scope.triggerChar);
-                        mentioUtil.popUnderMention(scope.parentMentio.context(),
-                            triggerCharSet, element, scope.requireLeadingSpace);
+                        mentioUtil.popUnderMention(triggerCharSet, element, scope.requireLeadingSpace);
                     }
-                });
-
-                scope.parentMentio.$on('$destroy', function () {
-                    element.remove();
                 });
 
                 scope.hideMenu = function () {
                     scope.visible = false;
                     element.css('display', 'none');
-                };
-
-                scope.adjustScroll = function (direction) {
-                    var menuEl = element[0];
-                    var menuItemsList = menuEl.querySelector('ul');
-                    var menuItem = (menuEl.querySelector('[mentio-menu-item].active') || 
-                        menuEl.querySelector('[data-mentio-menu-item].active'));
-
-                    if (scope.isFirstItemActive()) {
-                        return menuItemsList.scrollTop = 0;
-                    } else if(scope.isLastItemActive()) {
-                        return menuItemsList.scrollTop = menuItemsList.scrollHeight;
-                    }
-
-                    if (direction === 1) {
-                        menuItemsList.scrollTop += menuItem.offsetHeight;
-                    } else {
-                        menuItemsList.scrollTop -= menuItem.offsetHeight;
-                    }
                 };
 
             }
@@ -651,9 +503,9 @@ angular.module('mentio', [])
                     });
                 });
 
-                element.bind('click', function () {
+                element.bind('click', function (e) {
+                    e.preventDefault();
                     controller.selectItem(scope.item);
-                    return false;
                 });
             }
         };
@@ -686,17 +538,17 @@ angular.module('mentio')
     .factory('mentioUtil', ["$window", "$location", "$anchorScroll", "$timeout", function ($window, $location, $anchorScroll, $timeout) {
 
         // public
-        function popUnderMention (ctx, triggerCharSet, selectionEl, requireLeadingSpace) {
+        function popUnderMention (triggerCharSet, selectionEl, requireLeadingSpace) {
             var coordinates;
-            var mentionInfo = getTriggerInfo(ctx, triggerCharSet, requireLeadingSpace, false);
+            var mentionInfo = getTriggerInfo(triggerCharSet, requireLeadingSpace, false);
 
             if (mentionInfo !== undefined) {
 
-                if (selectedElementIsTextAreaOrInput(ctx)) {
-                    coordinates = getTextAreaOrInputUnderlinePosition(ctx, getDocument(ctx).activeElement,
+                if (selectedElementIsTextAreaOrInput()) {
+                    coordinates = getTextAreaOrInputUnderlinePosition(document.activeElement,
                         mentionInfo.mentionPosition);
                 } else {
-                    coordinates = getContentEditableCaretPosition(ctx, mentionInfo.mentionPosition);
+                    coordinates = getContentEditableCaretPosition(mentionInfo.mentionPosition);
                 }
 
                 // Move the button into place.
@@ -704,12 +556,12 @@ angular.module('mentio')
                     top: coordinates.top + 'px',
                     left: coordinates.left + 'px',
                     position: 'absolute',
-                    zIndex: 10000,
+                    zIndex: 100,
                     display: 'block'
                 });
 
                 $timeout(function(){
-                    scrollIntoView(ctx, selectionEl);
+                    scrollIntoView(selectionEl);
                 },0);
             } else {
                 selectionEl.css({
@@ -718,7 +570,7 @@ angular.module('mentio')
             }
         }
 
-        function scrollIntoView(ctx, elem)
+        function scrollIntoView(elem)
         {
             // cheap hack in px - need to check styles relative to the element
             var reasonableBuffer = 20;
@@ -751,8 +603,8 @@ angular.module('mentio')
             }
         }
 
-        function selectedElementIsTextAreaOrInput (ctx) {
-            var element = getDocument(ctx).activeElement;
+        function selectedElementIsTextAreaOrInput () {
+            var element = document.activeElement;
             if (element !== null) {
                 var nodeName = element.nodeName;
                 var type = element.getAttribute('type');
@@ -761,127 +613,165 @@ angular.module('mentio')
             return false;
         }
 
-        function selectElement (ctx, targetElement, path, offset) {
+        function selectElement (targetElement, path, offset) {
             var range;
             var elem = targetElement;
-            if (path) {
-                for (var i = 0; i < path.length; i++) {
-                    elem = elem.childNodes[path[i]];
-                    if (elem === undefined) {
-                        return;
-                    }
-                    while (elem.length < offset) {
-                        offset -= elem.length;
-                        elem = elem.nextSibling;
-                    }
-                    if (elem.childNodes.length === 0 && !elem.length) {
-                        elem = elem.previousSibling;
-                    }
+            for (var i = 0; i < path.length; i++) {
+                elem = elem.childNodes[path[i]];
+                if (elem === undefined) {
+                    return;
+                }
+                while (elem.length < offset) {
+                    offset -= elem.length;
+                    elem = elem.nextSibling;
                 }
             }
-            var sel = getWindowSelection(ctx);
-
-            range = getDocument(ctx).createRange();
-            range.setStart(elem, offset);
-            range.setEnd(elem, offset);
-            range.collapse(true);
-            try{sel.removeAllRanges();}catch(error){}
-            sel.addRange(range);
-            targetElement.focus();
-        }
-
-        function pasteHtml (ctx, html, startPos, endPos) {
-            var range, sel;
-            sel = getWindowSelection(ctx);
-            range = getDocument(ctx).createRange();
-            range.setStart(sel.anchorNode, startPos);
-            range.setEnd(sel.anchorNode, endPos);
-            range.deleteContents();
-
-            var el = getDocument(ctx).createElement('div');
-            el.innerHTML = html;
-            var frag = getDocument(ctx).createDocumentFragment(),
-                node, lastNode;
-            while ((node = el.firstChild)) {
-                lastNode = frag.appendChild(node);
-            }
-            range.insertNode(frag);
-
-            // Preserve the selection
-            if (lastNode) {
-                range = range.cloneRange();
-                range.setStartAfter(lastNode);
+            if (document.selection && document.selection.createRange) {
+                console.log(624);
+                // Clone the TextRange and collapse
+                range = document.selection.createRange().duplicate();
+                range.select(elem);
+                range.selectStartOffset(offset);
+                range.selectEndOffset(offset);
                 range.collapse(true);
-                sel.removeAllRanges();
+                document.selection.removeAllRanges();
+                document.selection.addRange(range);
+            } else if (window.getSelection) {
+                var sel = window.getSelection();
+                range = document.createRange();
+                range.setStart(elem, offset);
+                range.setEnd(elem, offset);
+                range.collapse(true);
+                try{sel.removeAllRanges();}catch(error){}
                 sel.addRange(range);
+                //targetElement.focus();
             }
         }
 
-        function resetSelection (ctx, targetElement, path, offset) {
+        function pasteHtml (html, startPos, endPos) {
+            var range, sel;
+            if (document.selection && document.selection.createRange) {
+                range = document.selection.createRange().duplicate();
+                range.selectStartOffset(startPos);
+                range.selectEndOffset(endPos);
+                range.collapse(false);
+                range.deleteContents();
+
+                range.pasteHTML(html);
+            } else if (window.getSelection) {
+                sel = window.getSelection();
+                range = document.createRange();
+                range.setStart(sel.anchorNode, startPos);
+                range.setEnd(sel.anchorNode, endPos);
+                range.deleteContents();
+
+                var el = document.createElement('div');
+                el.innerHTML = html;
+                var frag = document.createDocumentFragment(),
+                    node, lastNode;
+                while ((node = el.firstChild)) {
+                    lastNode = frag.appendChild(node);
+                }
+                range.insertNode(frag);
+
+                // Preserve the selection
+                if (lastNode) {
+                    range = range.cloneRange();
+                    range.setStartAfter(lastNode);
+                    range.collapse(true);
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                }
+            }
+        }
+
+        function resetSelection (targetElement, path, offset) {
             var nodeName = targetElement.nodeName;
             if (nodeName === 'INPUT' || nodeName === 'TEXTAREA') {
-                if (targetElement !== getDocument(ctx).activeElement) {
+                console.log(685);
+                if (targetElement !== document.activeElement) {
                     targetElement.focus();
                 }
-            } else {
-                selectElement(ctx, targetElement, path, offset);
+            } else {console.log(689);
+                selectElement(targetElement, path, offset);
             }
         }
 
         // public
-        function replaceMacroText (ctx, targetElement, path, offset, macros, text) {
-            resetSelection(ctx, targetElement, path, offset);
+        function replaceMacroText (targetElement, path, offset, macros, text) {
+            resetSelection(targetElement, path, offset);
 
-            var macroMatchInfo = getMacroMatch(ctx, macros);
+            var macroMatchInfo = getMacroMatch(macros);
 
             if (macroMatchInfo.macroHasTrailingSpace) {
-                macroMatchInfo.macroText = macroMatchInfo.macroText + '\xA0';
-                text = text + '\xA0';
+                //macroMatchInfo.macroText = macroMatchInfo.macroText + '\xA0';
+                //text = text + '\xA0';
             }
 
             if (macroMatchInfo !== undefined) {
-                var element = getDocument(ctx).activeElement;
-                if (selectedElementIsTextAreaOrInput(ctx)) {
-                    var startPos = macroMatchInfo.macroPosition;
-                    var endPos = macroMatchInfo.macroPosition + macroMatchInfo.macroText.length;
-                    element.value = element.value.substring(0, startPos) + text +
-                        element.value.substring(endPos, element.value.length);
-                    element.selectionStart = startPos + text.length;
-                    element.selectionEnd = startPos + text.length;
+                var element = document.activeElement;
+                if (selectedElementIsTextAreaOrInput()) {
+                    //IE support
+                    if (document.selection) {
+                        element.focus();
+                        var sel = document.selection.createRange();
+                        sel.selectStartOffset(macroMatchInfo.macroPosition);
+                        sel.selectEndOffset(macroMatchInfo.macroPosition + macroMatchInfo.macroText.length);
+                        sel.text = text;
+                    }
+                    //MOZILLA and others
+                    else {
+                        var startPos = macroMatchInfo.macroPosition;
+                        var endPos = macroMatchInfo.macroPosition + macroMatchInfo.macroText.length;
+                        element.value = element.value.substring(0, startPos) + text +
+                            element.value.substring(endPos, element.value.length);
+                        element.selectionStart = startPos + text.length;
+                        element.selectionEnd = startPos + text.length;
+                    }
                 } else {
-                    pasteHtml(ctx, text, macroMatchInfo.macroPosition,
+                    pasteHtml(text, macroMatchInfo.macroPosition,
                             macroMatchInfo.macroPosition + macroMatchInfo.macroText.length);
                 }
             }
         }
 
         // public
-        function replaceTriggerText (ctx, targetElement, path, offset, triggerCharSet, 
-                text, requireLeadingSpace, hasTrailingSpace) {
-            resetSelection(ctx, targetElement, path, offset);
+        function replaceTriggerText (targetElement, path, offset, triggerCharSet, text, requireLeadingSpace) {
+            resetSelection(targetElement, path, offset);
 
-            var mentionInfo = getTriggerInfo(ctx, triggerCharSet, requireLeadingSpace, true, hasTrailingSpace);
+            var mentionInfo = getTriggerInfo(triggerCharSet, requireLeadingSpace, true);
 
             if (mentionInfo !== undefined) {
                 if (selectedElementIsTextAreaOrInput()) {
-                    var myField = getDocument(ctx).activeElement;
+                    var myField = document.activeElement;
                     text = text + ' ';
-                    var startPos = mentionInfo.mentionPosition;
-                    var endPos = mentionInfo.mentionPosition + mentionInfo.mentionText.length + 1;
-                    myField.value = myField.value.substring(0, startPos) + text +
-                        myField.value.substring(endPos, myField.value.length);
-                    myField.selectionStart = startPos + text.length;
-                    myField.selectionEnd = startPos + text.length;
+                    //IE support
+                    if (document.selection) {
+                        myField.focus();
+                        var sel = document.selection.createRange();
+                        sel.selectStartOffset(mentionInfo.mentionPosition);
+                        sel.selectEndOffset(mentionInfo.mentionPosition + mentionInfo.mentionText.length);
+                        sel.text = text;
+                    }
+                    //MOZILLA and others
+                    else {
+                        var startPos = mentionInfo.mentionPosition;
+                        var endPos = mentionInfo.mentionPosition + mentionInfo.mentionText.length + 1;
+                        myField.value = myField.value.substring(0, startPos) + text +
+                            myField.value.substring(endPos, myField.value.length);
+                        myField.selectionStart = startPos + text.length;
+                        myField.selectionEnd = startPos + text.length;
+                    }
                 } else {
                     // add a space to the end of the pasted text
                     text = text + '\xA0';
-                    pasteHtml(ctx, text, mentionInfo.mentionPosition,
+                    pasteHtml(text, mentionInfo.mentionPosition,
                             mentionInfo.mentionPosition + mentionInfo.mentionText.length + 1);
                 }
             }
         }
 
-        function getNodePositionInParent (ctx, elem) {
+        function getNodePositionInParent (elem) {
             if (elem.parentNode === null) {
                 return 0;
             }
@@ -894,28 +784,28 @@ angular.module('mentio')
         }
 
         // public
-        function getMacroMatch (ctx, macros) {
+        function getMacroMatch (macros) {
             var selected, path = [], offset;
 
-            if (selectedElementIsTextAreaOrInput(ctx)) {
-                selected = getDocument(ctx).activeElement;
+            if (selectedElementIsTextAreaOrInput()) {
+                selected = document.activeElement;
             } else {
                 // content editable
-                var selectionInfo = getContentEditableSelectedPath(ctx);
+                var selectionInfo = getContentEditableSelectedPath();
                 if (selectionInfo) {
                     selected = selectionInfo.selected;
                     path = selectionInfo.path;
                     offset = selectionInfo.offset;
                 }
             }
-            var effectiveRange = getTextPrecedingCurrentSelection(ctx);
+            var effectiveRange = getTextPrecedingCurrentSelection();
             if (effectiveRange !== undefined && effectiveRange !== null) {
 
                 var matchInfo;
 
                 var hasTrailingSpace = false;
 
-                if (effectiveRange.length > 0 &&
+                if (effectiveRange.length > 0 && 
                     (effectiveRange.charAt(effectiveRange.length - 1) === '\xA0' ||
                         effectiveRange.charAt(effectiveRange.length - 1) === ' ')) {
                     hasTrailingSpace = true;
@@ -948,9 +838,9 @@ angular.module('mentio')
             }
         }
 
-        function getContentEditableSelectedPath(ctx) {
+        function getContentEditableSelectedPath() {
             // content editable
-            var sel = getWindowSelection(ctx);
+            var sel = window.getSelection();
             var selected = sel.anchorNode;
             var path = [];
             var offset;
@@ -958,7 +848,7 @@ angular.module('mentio')
                 var i;
                 var ce = selected.contentEditable;
                 while (selected !== null && ce !== 'true') {
-                    i = getNodePositionInParent(ctx, selected);
+                    i = getNodePositionInParent(selected);
                     path.push(i);
                     selected = selected.parentNode;
                     if (selected !== null) {
@@ -977,23 +867,22 @@ angular.module('mentio')
         }
 
         // public
-        function getTriggerInfo (ctx, triggerCharSet, requireLeadingSpace, menuAlreadyActive, hasTrailingSpace) {
-            /*jshint maxcomplexity:11 */
-            // yes this function needs refactoring 
+        function getTriggerInfo (triggerCharSet, requireLeadingSpace, menuAlreadyActive) {
+            
             var selected, path, offset;
-            if (selectedElementIsTextAreaOrInput(ctx)) {
-                selected = getDocument(ctx).activeElement;
+            if (selectedElementIsTextAreaOrInput()) {
+                selected = document.activeElement;
             } else {
                 // content editable
-                var selectionInfo = getContentEditableSelectedPath(ctx);
+                var selectionInfo = getContentEditableSelectedPath();
                 if (selectionInfo) {
                     selected = selectionInfo.selected;
                     path = selectionInfo.path;
                     offset = selectionInfo.offset;
                 }
             }
-            var effectiveRange = getTextPrecedingCurrentSelection(ctx);
-
+            var effectiveRange = getTextPrecedingCurrentSelection();
+            console.log("effect iveRange: " + effectiveRange);
             if (effectiveRange !== undefined && effectiveRange !== null) {
                 var mostRecentTriggerCharPos = -1;
                 var triggerChar;
@@ -1004,32 +893,30 @@ angular.module('mentio')
                         triggerChar = c;
                     }
                 });
-                if (mostRecentTriggerCharPos >= 0 &&
+                if (mostRecentTriggerCharPos >= 0 && 
                         (
-                            mostRecentTriggerCharPos === 0 ||
+                            mostRecentTriggerCharPos === 0 || 
                             !requireLeadingSpace ||
                             /[\xA0\s]/g.test
                             (
                                 effectiveRange.substring(
-                                    mostRecentTriggerCharPos - 1,
+                                    mostRecentTriggerCharPos - 1, 
                                     mostRecentTriggerCharPos)
                             )
                         )
-                    )
+                    ) 
                 {
                     var currentTriggerSnippet = effectiveRange.substring(mostRecentTriggerCharPos + 1,
                         effectiveRange.length);
 
                     triggerChar = effectiveRange.substring(mostRecentTriggerCharPos, mostRecentTriggerCharPos+1);
                     var firstSnippetChar = currentTriggerSnippet.substring(0,1);
-                    var leadingSpace = currentTriggerSnippet.length > 0 &&
+                    console.log("triggersnippet: "+ currentTriggerSnippet);
+                    var leadingSpace = currentTriggerSnippet.length > 0 && 
                         (
                             firstSnippetChar === ' ' ||
                             firstSnippetChar === '\xA0'
                         );
-                    if (hasTrailingSpace) {
-                        currentTriggerSnippet = currentTriggerSnippet.trim();
-                    }
                     if (!leadingSpace && (menuAlreadyActive || !(/[\xA0\s]/g.test(currentTriggerSnippet)))) {
                         return {
                             mentionPosition: mostRecentTriggerCharPos,
@@ -1044,112 +931,95 @@ angular.module('mentio')
             }
         }
 
-        function getWindowSelection(ctx) {
-            if (!ctx) {
-                return window.getSelection();
-            } else {
-                return ctx.iframe.contentWindow.getSelection();
-            }
-        }
-
-        function getDocument(ctx) {
-            if (!ctx) {
-                return document;
-            } else {
-                return ctx.iframe.contentWindow.document;
-            }
-        }
-
-        function getTextPrecedingCurrentSelection (ctx) {
+        function getTextPrecedingCurrentSelection () {
+            
             var text;
-            if (selectedElementIsTextAreaOrInput(ctx)) {
-                var textComponent = getDocument(ctx).activeElement;
-                var startPos = textComponent.selectionStart;
-                text = textComponent.value.substring(0, startPos);
+            if (selectedElementIsTextAreaOrInput()) {
+                
+                var textComponent = document.activeElement;
+                // IE version
+                if (document.selection !== undefined) {
+                    textComponent.focus();
+                    var sel = document.selection.createRange();
+                    text = sel.text;
+                }
+                // Mozilla version
+                else if (textComponent.selectionStart !== undefined) {
+                    var startPos = textComponent.selectionStart;
+                    text = textComponent.value.substring(0, startPos);
+                }
 
             } else {
-                var selectedElem = getWindowSelection(ctx).anchorNode;
+                var selectedElem = window.getSelection().anchorNode;
                 if (selectedElem != null) {
                     var workingNodeContent = selectedElem.textContent;
-                    var selectStartOffset = getWindowSelection(ctx).getRangeAt(0).startOffset;
+                    //var selectStartOffset = window.getSelection().getRangeAt(0).startOffset;
+                    var selectStartOffset = selectedElem.textContent.length+1;
                     if (selectStartOffset >= 0) {
                         text = workingNodeContent.substring(0, selectStartOffset);
                     }
                 }
             }
+            
             return text;
         }
 
-        function getContentEditableCaretPosition (ctx, selectedNodePosition) {
+        function getContentEditableCaretPosition (selectedNodePosition) {
             var markerTextChar = '\ufeff';
+            var markerTextCharEntity = '&#xfeff;';
             var markerEl, markerId = 'sel_' + new Date().getTime() + '_' + Math.random().toString().substr(2);
 
             var range;
-            var sel = getWindowSelection(ctx);
-            var prevRange = sel.getRangeAt(0);
-            range = getDocument(ctx).createRange();
+            if (document.selection && document.selection.createRange) {
+                // Clone the TextRange and collapse
+                range = document.selection.createRange().duplicate();
+                range.selectStartOffset(selectedNodePosition);
+                range.selectEndOffset(selectedNodePosition);
+                range.collapse(false);
 
-            range.setStart(sel.anchorNode, selectedNodePosition);
-            range.setEnd(sel.anchorNode, selectedNodePosition);
+                // Create the marker element containing a single invisible character by
+                // creating literal HTML and insert it
+                range.pasteHTML('<span id="' + markerId + '" style="position: relative;">' +
+                    markerTextCharEntity + '</span>');
+                markerEl = document.getElementById(markerId);
+            } else if (window.getSelection) {
+                var sel = window.getSelection();
+                range = document.createRange();
 
-            range.collapse(false);
+                range.setStart(sel.anchorNode, selectedNodePosition);
+                range.setEnd(sel.anchorNode, selectedNodePosition);
 
-            // Create the marker element containing a single invisible character using DOM methods and insert it
-            markerEl = getDocument(ctx).createElement('span');
-            markerEl.id = markerId;
-            markerEl.appendChild(getDocument(ctx).createTextNode(markerTextChar));
-            range.insertNode(markerEl);
-            sel.removeAllRanges();
-            sel.addRange(prevRange);
+                range.collapse(false);
 
+                // Create the marker element containing a single invisible character using DOM methods and insert it
+                markerEl = document.createElement('span');
+                markerEl.id = markerId;
+                markerEl.appendChild(document.createTextNode(markerTextChar));
+                range.insertNode(markerEl);
+            }
+
+            var obj = markerEl;
             var coordinates = {
                 left: 0,
                 top: markerEl.offsetHeight
             };
-
-            localToGlobalCoordinates(ctx, markerEl, coordinates);
+            do {
+                coordinates.left += obj.offsetLeft;
+                coordinates.top += obj.offsetTop;
+            } while (obj = obj.offsetParent);
 
             markerEl.parentNode.removeChild(markerEl);
             return coordinates;
         }
 
-        function localToGlobalCoordinates(ctx, element, coordinates) {
-            var obj = element;
-            var iframe = ctx ? ctx.iframe : null;
-            while(obj) {
-                coordinates.left += obj.offsetLeft + obj.clientLeft;
-                coordinates.top += obj.offsetTop + obj.clientTop;
-                obj = obj.offsetParent;
-                if (!obj && iframe) {
-                    obj = iframe;
-                    iframe = null;
-                }
-            }            
-            obj = element;
-            iframe = ctx ? ctx.iframe : null;
-            while(obj !== getDocument().body) {
-                if (obj.scrollTop && obj.scrollTop > 0) {
-                    coordinates.top -= obj.scrollTop;
-                }
-                if (obj.scrollLeft && obj.scrollLeft > 0) {
-                    coordinates.left -= obj.scrollLeft;
-                }
-                obj = obj.parentNode;
-                if (!obj && iframe) {
-                    obj = iframe;
-                    iframe = null;
-                }
-            }            
-         }
-
-        function getTextAreaOrInputUnderlinePosition (ctx, element, position) {
+        function getTextAreaOrInputUnderlinePosition (element, position) {
             var properties = [
-                'direction',
+                'direction', 
                 'boxSizing',
-                'width',
+                'width', 
                 'height',
                 'overflowX',
-                'overflowY',
+                'overflowY', 
                 'borderTopWidth',
                 'borderRightWidth',
                 'borderBottomWidth',
@@ -1176,21 +1046,21 @@ angular.module('mentio')
 
             var isFirefox = (window.mozInnerScreenX !== null);
 
-            var div = getDocument(ctx).createElement('div');
+            var div = document.createElement('div');
             div.id = 'input-textarea-caret-position-mirror-div';
-            getDocument(ctx).body.appendChild(div);
+            document.body.appendChild(div);
 
             var style = div.style;
             var computed = window.getComputedStyle ? getComputedStyle(element) : element.currentStyle;
 
             style.whiteSpace = 'pre-wrap';
             if (element.nodeName !== 'INPUT') {
-                style.wordWrap = 'break-word';
+                style.wordWrap = 'break-word'; 
             }
 
             // position off-screen
-            style.position = 'absolute';
-            style.visibility = 'hidden';
+            style.position = 'absolute'; 
+            style.visibility = 'hidden'; 
 
             // transfer the element's properties to the div
             properties.forEach(function (prop) {
@@ -1202,7 +1072,7 @@ angular.module('mentio')
                 if (element.scrollHeight > parseInt(computed.height))
                     style.overflowY = 'scroll';
             } else {
-                style.overflow = 'hidden';
+                style.overflow = 'hidden'; 
             }
 
             div.textContent = element.value.substring(0, position);
@@ -1211,18 +1081,22 @@ angular.module('mentio')
                 div.textContent = div.textContent.replace(/\s/g, '\u00a0');
             }
 
-            var span = getDocument(ctx).createElement('span');
+            var span = document.createElement('span');
             span.textContent = element.value.substring(position) || '.';
             div.appendChild(span);
 
             var coordinates = {
-                top: span.offsetTop + parseInt(computed.borderTopWidth) + parseInt(computed.fontSize),
+                top: span.offsetTop + parseInt(computed.borderTopWidth) + span.offsetHeight,
                 left: span.offsetLeft + parseInt(computed.borderLeftWidth)
             };
 
-            localToGlobalCoordinates(ctx, element, coordinates);
+            var obj = element;
+            do {
+                coordinates.left += obj.offsetLeft;
+                coordinates.top += obj.offsetTop;
+            } while (obj = obj.offsetParent);
 
-            getDocument(ctx).body.removeChild(div);
+            document.body.removeChild(div);
 
             return coordinates;
         }
