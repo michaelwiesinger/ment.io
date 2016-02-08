@@ -17,7 +17,6 @@ angular.module('mentio', [])
             controller: ["$scope", "$timeout", "$attrs", function($scope, $timeout, $attrs) {
 
                 $scope.query = function (triggerChar, triggerText) {
-                    console.log("query");
                     var remoteScope = $scope.triggerCharMap[triggerChar];
                     remoteScope.showMenu();
 
@@ -25,7 +24,6 @@ angular.module('mentio', [])
                         //term: triggerText.trim()
                         term: triggerText
                     });
-                    console.log("triggerTExt: " + triggerText.trim());
                     //remoteScope.typedTerm = triggerText.trim();
                     remoteScope.typedTerm = triggerText;
                 };
@@ -66,12 +64,12 @@ angular.module('mentio', [])
 
                 $scope.replaceText = function (text) {
                     $scope.hideAll();
-                    //debugger;
+                    
                     mentioUtil.replaceTriggerText($scope.targetElement, $scope.targetElementPath,
                         $scope.targetElementSelectedOffset, $scope.triggerCharSet, text, $scope.requireLeadingSpace);
-                    //$scope.setTriggerText('');
-                    //angular.element($scope.targetElement).triggerHandler('change');
-                    /*if ($scope.isContentEditable()) {
+                    $scope.setTriggerText('');
+                    angular.element($scope.targetElement).triggerHandler('change');
+                    if ($scope.isContentEditable()) {
                         $scope.contentEditableMenuPasted = true;
                         var timer = $timeout(function() {
                             $scope.contentEditableMenuPasted = false;
@@ -79,7 +77,7 @@ angular.module('mentio', [])
                         $scope.$on('$destroy', function() {
                             $timeout.cancel(timer);
                         });
-                    }*/
+                    }
                 };
 
                 $scope.hideAll = function () {
@@ -192,7 +190,6 @@ angular.module('mentio', [])
                         var activeMenuScope = $scope.getActiveMenuScope();
                         if (activeMenuScope) {
                             if (event.which === 9 || event.which === 13) {
-                                console.log(193);
                                 event.preventDefault();
                                 activeMenuScope.selectActive();
                             }
@@ -310,25 +307,24 @@ angular.module('mentio', [])
                             scope.targetElementSelectedOffset = mentionInfo.mentionSelectedOffset;
 
                             /* publish to external ngModel */
-                            //scope.setTriggerText(mentionInfo.mentionText);
+                            scope.setTriggerText(mentionInfo.mentionText);
                             /* remember current position */
                             scope.currentMentionPosition = mentionInfo.mentionPosition;
                             scope.currentMentionTriggerChar = mentionInfo.mentionTriggerChar;
                             /* perform query */
                             scope.query(mentionInfo.mentionTriggerChar, mentionInfo.mentionText);
                         } else {
-                            console.log(318);
                             scope.setTriggerText('');
                             scope.hideAll();
 
-                            /*var macroMatchInfo = mentioUtil.getMacroMatch(scope.macros);
+                            var macroMatchInfo = mentioUtil.getMacroMatch(scope.macros);
 
                             if (macroMatchInfo !== undefined) {
                                 scope.targetElement = macroMatchInfo.macroSelectedElement;
                                 scope.targetElementPath = macroMatchInfo.macroSelectedPath;
                                 scope.targetElementSelectedOffset = macroMatchInfo.macroSelectedOffset;
                                 scope.replaceMacro(macroMatchInfo.macroText, macroMatchInfo.macroHasTrailingSpace);
-                            }*/
+                            }
                         }
                     }
                 );
@@ -364,7 +360,7 @@ angular.module('mentio', [])
                 };
 
                 $scope.defaultSelect = function(locals) {
-                    return $scope.triggerChar + locals.item.name;
+                    return $scope.triggerChar + locals.item.label;
                 };
 
                 // callable both with controller (menuItem) and without controller (local)
@@ -455,7 +451,6 @@ angular.module('mentio', [])
                             scope.requestVisiblePendingSearch = false;
                         }
                     } else {
-                        console.log("hidemenu");
                         scope.hideMenu();
                     }
                 });
@@ -627,7 +622,6 @@ angular.module('mentio')
                 }
             }
             if (document.selection && document.selection.createRange) {
-                console.log(624);
                 // Clone the TextRange and collapse
                 range = document.selection.createRange().duplicate();
                 range.select(elem);
@@ -688,11 +682,10 @@ angular.module('mentio')
         function resetSelection (targetElement, path, offset) {
             var nodeName = targetElement.nodeName;
             if (nodeName === 'INPUT' || nodeName === 'TEXTAREA') {
-                console.log(685);
                 if (targetElement !== document.activeElement) {
                     targetElement.focus();
                 }
-            } else {console.log(689);
+            } else {
                 selectElement(targetElement, path, offset);
             }
         }
@@ -882,7 +875,6 @@ angular.module('mentio')
                 }
             }
             var effectiveRange = getTextPrecedingCurrentSelection();
-            console.log("effect iveRange: " + effectiveRange);
             if (effectiveRange !== undefined && effectiveRange !== null) {
                 var mostRecentTriggerCharPos = -1;
                 var triggerChar;
@@ -911,7 +903,6 @@ angular.module('mentio')
 
                     triggerChar = effectiveRange.substring(mostRecentTriggerCharPos, mostRecentTriggerCharPos+1);
                     var firstSnippetChar = currentTriggerSnippet.substring(0,1);
-                    console.log("triggersnippet: "+ currentTriggerSnippet);
                     var leadingSpace = currentTriggerSnippet.length > 0 && 
                         (
                             firstSnippetChar === ' ' ||
@@ -1109,9 +1100,6 @@ angular.module('mentio')
             getMacroMatch: getMacroMatch,
             getTriggerInfo: getTriggerInfo,
             selectElement: selectElement,
-
-
-
 
             // private: for unit testing only
             getTextAreaOrInputUnderlinePosition: getTextAreaOrInputUnderlinePosition,
