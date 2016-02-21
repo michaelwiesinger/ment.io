@@ -99,6 +99,7 @@ angular.module('mentio', [])
                     return null;
                 };
 
+ 
                 $scope.selectActive = function () {
                     for (var key in $scope.triggerCharMap) {
                         if ($scope.triggerCharMap.hasOwnProperty(key)) {
@@ -340,6 +341,7 @@ angular.module('mentio', [])
                 select: '&mentioSelect',
                 items: '=mentioItems',
                 triggerChar: '=mentioTriggerChar',
+                endChar: '=mentioEndChar',
                 forElem: '=mentioFor',
                 parentScope: '=mentioParentScope'
             },
@@ -360,7 +362,7 @@ angular.module('mentio', [])
                 };
 
                 $scope.defaultSelect = function(locals) {
-                    return $scope.triggerChar + locals.item.label;
+                    return $scope.triggerChar + locals.item.label + $scope.endChar;
                 };
 
                 // callable both with controller (menuItem) and without controller (local)
